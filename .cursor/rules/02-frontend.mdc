@@ -1,0 +1,92 @@
+---
+description: Frontend rules, apply only when working on frontend
+alwaysApply: false
+---
+
+# Frontend Development Rules (React + Tailwind)
+
+## 1. Architecture & File Structure
+- **Pattern:** Feature-based structure combined with technical layers (`src/features/` or `src/modules/`).
+  - *Pages:* Route handlers, layout composition, data fetching initiation.
+  - *Components:* Reusable UI blocks. Separate "Smart" (Logic/Data) and "Dumb" (UI only) components.
+- **Naming:**
+  - Components: `PascalCase.jsx` (e.g., `BookList.jsx`).
+  - Folders: `kebab-case`.
+  - **Avoid Index Imports:** Do not use `index.jsx` for component logic. Use `BookList.jsx` and re-export via `index.js` to avoid "index hell" in tabs.
+- **Services:** Centralized API definitions in `src/services/`. Return clean data or standardized errors.
+
+## 2. Component Implementation
+- **Functional Only:** Use Function Components + Hooks. No Class components.
+- **Props:** Always destructure props. Use TypeScript interfaces or PropTypes.
+- **Hooks:** Extract complex logic into custom hooks (prefix `use...`).
+- **Logic:** Keep components pure. Avoid side effects outside `useEffect` or Event Handlers.
+
+## 3. Styling (Tailwind CSS)
+- **Engine:** Tailwind CSS.
+- **Dynamic Classes:** **MANDATORY:** Use `clsx` + `tailwind-merge` (or a `cn()` utility) to merge classes conditionally. Never concatenate strings manually to avoid conflicts.
+- **Structure:** Mobile-first (`sm:`, `md:`). Avoid inline styles (`style={{}}`).
+- **Consistency:** Use `tailwind.config.js` for colors/spacing. Create base UI components (Button, Input) instead of repeating long class strings.
+
+## 4. Data Management & Forms
+- **Server State:** Prioritize **TanStack Query (React Query)** over `useEffect` for data fetching (handles caching/loading/error auto).
+- **Global State:** Minimal Context usage (Auth/Theme only). Use Zustand/Redux for complex client state.
+- **Forms:** Use **React Hook Form** combined with **Zod** for schema validation.
+- **UX:** Display validation errors immediately below fields. Handle "Loading" and "Empty" states explicitly.
+
+## 5. Performance & Security
+- **Optimization:** Use `useMemo`/`useCallback` for referential equality in heavy trees or when passing props to memoized children.
+- **Lazy Loading:** Use `React.lazy` and `Suspense` for routes and heavy modals.
+- **Security:** Sanitize inputs before rendering (`dangerouslySetInnerHTML`). Never store sensitive secrets/keys in frontend code.
+
+## 6. Quality Assurance & Testing
+- **Philosophy:** Follow the **"Testing Trophy"**. Prioritize **Integration Tests** over Unit Tests for Components.
+- **Tools:** Vitest + React Testing Library (RTL).
+- **Strategy:**
+  - *Components:* Test **Behavior**, not Implementation. (e.g., "User clicks button -> Text appears", NOT "State variable changes").
+  - *Utilities/Hooks:* Unit Test inputs/outputs.
+  - *API:* **Mock** all network requests (using MSW or Vitest mocks) in tests.
+- **Linting:** Run ESLint and Prettier before commit.
+
+## 7. Frontend-Specific Clean Code Rules
+
+### 7.1. Component Design
+- **Component Size:** Keep components small and focused. Split large components into smaller, composable pieces.
+- **Props Interface:** Define clear prop interfaces. Use TypeScript or PropTypes. Avoid prop drilling beyond 2-3 levels.
+- **Custom Hooks:** Extract reusable logic into custom hooks. Keep components focused on rendering.
+- **Separation of Concerns:** Separate presentation components from container components. Keep business logic out of UI components.
+
+### 7.2. React Patterns
+- **Controlled vs Uncontrolled:** Prefer controlled components for form inputs. Use uncontrolled only when necessary.
+- **Key Props:** Always provide stable, unique keys for list items. Avoid using array index as key when list order can change.
+- **Conditional Rendering:** Use early returns and guard clauses. Prefer `&&` and ternary for simple conditions.
+- **Event Handlers:** Use descriptive names: `handleSubmit`, `onClickHandler`. Avoid inline arrow functions in JSX when possible.
+
+### 7.3. State Management
+- **Local vs Global:** Keep state as local as possible. Only lift state up when multiple components need it.
+- **State Updates:** Use functional updates for state that depends on previous state: `setCount(prev => prev + 1)`.
+- **Derived State:** Avoid storing derived state. Calculate it from source state instead.
+- **State Shape:** Keep state flat and normalized. Avoid deeply nested state structures.
+
+### 7.4. Performance Optimization
+- **Memoization:** Use `React.memo` for expensive components. Use `useMemo`/`useCallback` sparingly, only when needed.
+- **Code Splitting:** Use dynamic imports for routes and heavy components. Implement proper loading states.
+- **Bundle Size:** Monitor bundle size. Use tree-shaking. Avoid importing entire libraries when only a function is needed.
+- **Re-renders:** Minimize unnecessary re-renders. Use React DevTools Profiler to identify bottlenecks.
+
+### 7.5. CSS/Tailwind Clean Code Rules
+- **Class Organization:** Group related classes logically: layout → spacing → typography → colors → effects. Use consistent ordering.
+- **Class Length:** Avoid extremely long class strings (20+ classes). Extract to component variants or use `@apply` in CSS when appropriate.
+- **Responsive Design:** Use mobile-first approach. Order responsive classes: base → `sm:` → `md:` → `lg:` → `xl:` → `2xl:`.
+- **Conditional Classes:** Always use `clsx` + `tailwind-merge` (or `cn()` utility) for conditional classes. Never concatenate strings manually.
+- **Reusable Patterns:** Extract repeated class combinations into reusable components or utility functions. Don't repeat long class strings.
+- **Custom Utilities:** Use `tailwind.config.js` for project-specific design tokens (colors, spacing, shadows). Avoid arbitrary values when possible.
+- **Arbitrary Values:** Use sparingly. Prefer extending config over `w-[123px]`. Only use for truly one-off values.
+- **Dark Mode:** Use `dark:` prefix consistently. Group dark mode classes with their light counterparts.
+- **Pseudo-classes:** Group pseudo-class variants together: `hover:`, `focus:`, `active:`, `disabled:`.
+- **No Inline Styles:** Avoid `style={{}}` prop. Use Tailwind classes or CSS variables. Exception: dynamic values that can't be expressed in Tailwind.
+- **CSS Variables:** Use CSS variables for dynamic theming or values that change at runtime. Define in `:root` or component scope.
+- **Component Variants:** For components with multiple visual variants, use `cva` (class-variance-authority) or similar pattern instead of long conditional class strings.
+- **Separation:** Keep styling concerns separate from logic. Use composition over long conditional class strings in JSX.
+- **Readability:** Break long class strings across multiple lines for readability. Use consistent indentation.
+- **Specificity:** Avoid `!important` in Tailwind. Use more specific selectors or restructure classes if needed.
+- **Performance:** Tailwind purges unused classes automatically. Don't worry about unused classes in code - they won't be in production bundle.

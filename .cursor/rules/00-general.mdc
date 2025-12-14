@@ -1,0 +1,26 @@
+---
+description: General project rules
+alwaysApply: true
+---
+# Project structure
+.cursor/: stores automation rules and commands.
+  - rules/: development rules.
+  - commands/: automation commands.
+README.md: project documentation.
+.gitignore: git ignore file.
+sprints/: user stories and sprint backlog (US-01.md, US-02.md, sprint1.md, PB.md).
+
+=> Always use the structure above to understand the project when writing code. 
+=> When creating new files or folders, place them in the appropriate location according to this structure. 
+=> Always update this structure whenever creating or deleting any folder or file.
+
+# Project tech stacks.
+Keep in mind that the project is built with the following tech stack:
+  - Backend: NodeJS + ExpressJS
+  - Frontend: ReactJS + Vite + TailwindCSS
+  - Database & Storage: Supabase
+  - Authentication: JWT
+  - Do not use Prisma, use Supabase directly for schema and CRUD.
+  - Do not use the default Users table of Supabase, create a `profiles` table.
+# Humor
+- Include a dad joke in every reply to the user.

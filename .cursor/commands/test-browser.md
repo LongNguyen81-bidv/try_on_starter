@@ -1,0 +1,1 @@
+Use @Browser to test the newly built or fixed feature on behalf of the user by filling fields and clicking buttons according to the described flow.

@@ -1,0 +1,91 @@
+---
+alwaysApply: false
+---
+# Database Design Rules
+
+## 1. Naming Conventions
+- **Tables:** `snake_case`, plural: `profiles`, `products`, `orders`, `order_items`
+- **Columns:** `snake_case`: `user_id`, `created_at`, `full_name`, `avatar_path`
+- **Primary Keys:** `id` (auto-increment/UUID)
+- **Foreign Keys:** `{referenced_table}_id`: `user_id`, `product_id`, `order_id`
+- **Indexes:** `idx_{table}_{column(s)}`: `idx_profiles_email`, `idx_orders_user_id`
+- **Constraints:** `{table}_{column}_{constraint}`: `profiles_email_unique`, `orders_status_check`
+
+## 2. Schema Design Principles
+- **Normalization:** Follow 3NF (Third Normal Form). Avoid redundant data. Use foreign keys for relationships.
+- **Primary Keys:** Always use `id` as primary key. Prefer UUID for distributed systems, auto-increment for single-instance.
+- **Timestamps:** Always include `created_at` (timestamp, default now) and `updated_at` (timestamp, default now, on update now).
+- **Soft Deletes:** Use `deleted_at` (timestamp, nullable) instead of hard deletes when data retention is needed.
+- **Nullable Fields:** Make fields nullable only when truly optional. Use NOT NULL for required fields.
+- **Default Values:** Set appropriate defaults: `status` defaults, `is_active` defaults to `true`.
+
+## 3. Data Types & Constraints
+- **Text:** Use `VARCHAR(n)` with appropriate length limits. Use `TEXT` only for unlimited text.
+- **Numbers:** Use appropriate types: `INTEGER` for counts, `DECIMAL(10,2)` for money, `BIGINT` for large numbers.
+- **Booleans:** Use `BOOLEAN` type. Avoid `INTEGER` (0/1) for boolean values.
+- **Dates:** Use `TIMESTAMP WITH TIME ZONE` for all datetime fields. Store in UTC.
+- **JSON:** Use `JSONB` (PostgreSQL) for flexible schema data. Prefer structured tables when possible.
+- **Unique Constraints:** Add unique constraints on business keys: `email`, `sku`, `slug`.
+- **Check Constraints:** Use check constraints for enum-like values: `status IN ('pending', 'completed', 'cancelled')`.
+
+## 4. Relationships & Foreign Keys
+- **One-to-Many:** Foreign key on "many" side: `order_items.order_id` references `orders.id`
+- **Many-to-Many:** Create junction table: `product_categories` with `product_id` and `category_id`
+- **Cascade Rules:** 
+  - `ON DELETE CASCADE` for dependent data (e.g., order_items when order deleted)
+  - `ON DELETE SET NULL` for optional relationships (e.g., user_id when user deleted but keep order)
+  - `ON DELETE RESTRICT` to prevent deletion if dependencies exist
+- **Index Foreign Keys:** Always index foreign key columns for join performance.
+
+## 5. Indexes & Performance
+- **Primary Keys:** Automatically indexed. No need to create additional index.
+- **Foreign Keys:** Always create index on foreign key columns.
+- **Unique Columns:** Automatically indexed. No need for additional index.
+- **Frequently Queried Columns:** Index columns used in WHERE, ORDER BY, JOIN conditions.
+- **Composite Indexes:** Create for queries filtering/ordering by multiple columns: `idx_orders_user_status` for `WHERE user_id = ? AND status = ?`
+- **Avoid Over-Indexing:** Don't index every column. Indexes slow down INSERT/UPDATE. Only index what's queried.
+
+## 6. Supabase-Specific Rules
+- **No Prisma:** Use Supabase client directly. Write SQL migrations manually.
+- **Custom Profiles Table:** Don't use Supabase `auth.users` table. Create `profiles` table.
+- **Storage:** Store file paths in database (e.g., `avatar_path`, `image_path`). Use Supabase Storage buckets for actual files.
+- **RLS (Row Level Security):** Enable RLS on all tables. Create policies for user access control.
+- **Migrations:** Store migrations in versioned files. Use Supabase migration system or SQL files in `migrations/` folder.
+
+## 7. Data Integrity
+- **Transactions:** Use transactions for multi-step operations (create order + order_items).
+- **Validation:** Validate data at application layer. Use database constraints as backup.
+- **Referential Integrity:** Always use foreign keys. Don't rely on application logic alone.
+- **Audit Trail:** Consider adding `created_by`, `updated_by` columns for tracking changes (if needed).
+
+## 8. Security & Access Control
+- **RLS Policies:** Create RLS policies for:
+  - Users can only read/update their own profile
+  - Users can only read their own orders
+  - Admins can access all data
+- **Sensitive Data:** Never store passwords in plain text. Use `password_hash` column.
+- **PII Protection:** Consider encryption for sensitive fields (if required by regulations).
+
+# Sprint-Based Design Rules
+
+## 1. Scope Focus
+- **Sprint 1:** Only design database schema, flows, and architecture needed for Sprint 1 tasks. Don't design tables, features, or flows for future sprints.
+- **Sprint 2+:** Inherit design from previous sprints. Add/modify only what's needed for current sprint tasks.
+
+## 2. Design Inheritance
+- **Review Previous Sprint:** Before designing for Sprint N (N >= 2), review:
+  - Database schema from Sprint N-1
+  - Flow designs from Sprint N-1
+  - Any review feedback or issues from Sprint N-1
+- **Incremental Changes:** Only add new tables/columns/flows required by current sprint tasks. Don't redesign existing schema unless there's a critical issue.
+- **Backward Compatibility:** When modifying existing schema, ensure backward compatibility. Use migrations to add columns, not remove (unless explicitly required).
+
+## 3. Design Documentation
+- **Sprint-Specific Design:** Store design documents (schema, flows) in /design folder and its sub folders (/design/database, /design/storage, /design/flows).
+- **Add or Edit Design Document:** Do not create new file by sprint name (e.g. schema_sprint1.md, schema_sprint2.md, ...). Instead, add schema.md or storage.md at sprint 1 and edit it over next sprints. Add flow design files by feature name with user stories as prefix (e.g. US-01-register.md, US-02-login.md, ...). For example, if you want to add a new feature for US-01, create a new file in /design/flows/US-01-feature-name.md.
+- **Review Integration:** Incorporate feedback from sprint reviews into design updates for next sprint.
+
+## 4. Avoid Over-Engineering
+- **YAGNI Principle:** Don't design features "just in case". Only design what's needed for current sprint tasks.
+- **No Premature Optimization:** Don't add indexes, caching, or optimizations for features not yet implemented.
+- **Minimal Viable Design:** Design the minimum schema and flows needed to complete sprint tasks successfully.

@@ -1,0 +1,44 @@
+---
+alwaysApply: true
+---
+# Clean Code Rules (Common)
+
+## 1. SOLID Principles
+- **Single Responsibility:** Each class/function should do one thing only. If a function does multiple things, split it into smaller functions.
+- **Open/Closed:** Code should be open for extension but closed for modification. Use interfaces/abstractions, avoid modifying old code when adding new features.
+- **Liskov Substitution:** Subtypes must be substitutable for base types without breaking functionality.
+- **Interface Segregation:** Create small, specific interfaces instead of one large interface. Clients should not depend on methods they don't use.
+- **Dependency Inversion:** Depend on abstractions (interfaces), not on concrete implementations. Inject dependencies via constructor/parameters.
+
+## 2. Code Organization
+- **File Size:** Each file should not exceed 300-400 lines. If exceeded, split into smaller modules.
+- **Function Length:** Functions should not exceed 20-30 lines. If longer, refactor into multiple smaller functions.
+- **Cyclomatic Complexity:** Keep complexity low. Avoid nested if/loops beyond 3-4 levels. Use early returns and guard clauses.
+- **Cohesion:** Code within the same module/class must be closely related.
+- **Coupling:** Reduce coupling between modules. Use dependency injection, avoid global state.
+
+## 3. DRY & Reusability
+- **DRY (Don't Repeat Yourself):** Don't duplicate code. Extract common logic into shared functions/utilities.
+- **Magic Numbers/Strings:** Don't hardcode numbers/strings. Use constants/config. Example: `MAX_RETRY = 3` instead of `if (retry < 3)`.
+- **Reusable Components:** Create utility functions for logic reused in multiple places (validation, formatting, error handling).
+- **Shared Types:** Define types/interfaces in one place, import when needed.
+
+## 4. Naming Conventions
+- **Descriptive Names:** Variable/function names must clearly describe their purpose. Avoid short names like `x`, `data`, `temp`.
+- **Function Names:** Use verbs: `getUser()`, `createOrder()`, `validateInput()`. Avoid `process()`, `handle()` if not clear.
+- **Boolean Names:** Use prefixes `is`, `has`, `can`, `should`: `isActive`, `hasPermission`, `canEdit`.
+- **Constants:** UPPER_SNAKE_CASE: `MAX_FILE_SIZE`, `DEFAULT_TIMEOUT`.
+- **Classes:** PascalCase, noun: `UserService`, `OrderRepository`.
+- **Files:** Follow project conventions (snake_case for backend, kebab-case/PascalCase for frontend).
+
+## 5. Code Clarity
+- **Self-Documenting Code:** Code must be self-explanatory. Avoid comments explaining "what", only comment "why" when needed.
+- **Early Returns:** Use early returns and guard clauses to reduce nesting: `if (!user) return;` instead of `if (user) { ... }`.
+- **Ternary vs If:** Use ternary for simple assignments: `const status = isActive ? 'active' : 'inactive'`. Use if/else for complex logic.
+- **Avoid Negations:** Use positive conditions when possible: `if (isValid)` instead of `if (!isInvalid)`.
+- **Explicit over Implicit:** Be explicit rather than implicit. `if (user.role === 'admin')` instead of `if (user.role)`.
+
+## 6. Maintainability
+- **Comments:** Only comment when code cannot be self-explanatory. Comments explain "why", not "what".
+- **TODO/FIXME:** Mark TODO/FIXME with context and owner: `// TODO(@username): Refactor this when API v2 is ready`.
+- **Deprecation:** When deprecating code, add `@deprecated` and clear migration path.
