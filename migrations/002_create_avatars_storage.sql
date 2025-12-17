@@ -1,0 +1,76 @@
+-- Migration: Create avatars storage bucket
+-- Description: Tạo storage bucket và policies cho avatars (Sprint 1)
+-- Created: 2025-12-16
+-- Note: Script này cần chạy trên Supabase Dashboard hoặc qua Supabase CLI
+--       Vì storage operations không thể thực hiện qua SQL trực tiếp
+
+-- ============================================
+-- HƯỚNG DẪN THỰC HIỆN TRÊN SUPABASE DASHBOARD
+-- ============================================
+-- 
+-- 1. Vào Supabase Dashboard > Storage
+-- 2. Click "New bucket"
+-- 3. Đặt tên: "avatars"
+-- 4. Public: OFF (unchecked)
+-- 5. File size limit: 5242880 (5MB)
+-- 6. Allowed MIME types: image/jpeg,image/jpg,image/png
+-- 7. Click "Create bucket"
+--
+-- ============================================
+-- POLICIES (Row Level Security)
+-- ============================================
+-- LƯU Ý QUAN TRỌNG: 
+-- Project này KHÔNG sử dụng Supabase Auth, chỉ dùng JWT tự quản lý.
+-- Do đó, storage policies với auth.uid() sẽ KHÔNG hoạt động.
+-- 
+-- Có 2 cách xử lý:
+--
+-- CÁCH 1: Tắt RLS và sử dụng Service Role Key (Khuyến nghị cho development)
+-- - Vào Storage > avatars bucket > Settings
+-- - Tắt "Enable RLS" (hoặc để Public nếu cần)
+-- - Backend sử dụng SUPABASE_SERVICE_ROLE_KEY để upload/read files
+--
+-- CÁCH 2: Tạo policies cho authenticated role (nếu muốn dùng RLS)
+-- - Tạo policies qua Dashboard UI với điều kiện đơn giản hơn
+-- - Hoặc sử dụng policies dưới đây (cần điều chỉnh logic phù hợp)
+
+-- Nếu muốn tạo policies qua SQL (chỉ khi dùng Supabase Auth):
+-- CREATE POLICY "Users can upload their own avatar"
+-- ON storage.objects
+-- FOR INSERT
+-- TO authenticated
+-- WITH CHECK (
+--     bucket_id = 'avatars' AND
+--     (storage.foldername(name))[1] = (auth.uid())::text
+-- );
+--
+-- CREATE POLICY "Users can read their own avatar"
+-- ON storage.objects
+-- FOR SELECT
+-- TO authenticated
+-- USING (
+--     bucket_id = 'avatars' AND
+--     (storage.foldername(name))[1] = (auth.uid())::text
+-- );
+--
+-- CREATE POLICY "Users can delete their own avatar"
+-- ON storage.objects
+-- FOR DELETE
+-- TO authenticated
+-- USING (
+--     bucket_id = 'avatars' AND
+--     (storage.foldername(name))[1] = (auth.uid())::text
+-- );
+
+-- ============================================
+-- KHUYẾN NGHỊ CHO PROJECT NÀY
+-- ============================================
+-- Vì project dùng JWT tự quản lý (không dùng Supabase Auth):
+-- 1. Tạo bucket "avatars" với Public = OFF
+-- 2. Tắt RLS hoặc để Public (tùy yêu cầu bảo mật)
+-- 3. Backend sử dụng SUPABASE_SERVICE_ROLE_KEY để:
+--    - Upload file: sử dụng service role key
+--    - Generate signed URL: để frontend có thể đọc file
+-- 4. File path format: avatars/{user_id}/avatar.{ext}
+-- 5. Khi user upload avatar mới, backend xóa avatar cũ trước
+
