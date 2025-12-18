@@ -3,7 +3,7 @@ import { supabase } from '../config/database.js';
 export const findProfileByEmail = async (email) => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, password_hash, full_name')
+    .select('id, email, password_hash, full_name, role')
     .eq('email', email.toLowerCase())
     .single();
 
@@ -41,7 +41,7 @@ export const createProfile = async (profileData) => {
 export const findProfileById = async (id) => {
   const { data, error } = await supabase
     .from('profiles')
-    .select('id, email, full_name, height, weight, avatar_url, created_at, updated_at')
+    .select('id, email, full_name, height, weight, avatar_url, role, created_at, updated_at')
     .eq('id', id)
     .single();
 
@@ -69,7 +69,7 @@ export const updateProfile = async (id, updateData) => {
       updated_at: new Date().toISOString(),
     })
     .eq('id', id)
-    .select('id, email, full_name, height, weight, avatar_url, created_at, updated_at')
+    .select('id, email, full_name, height, weight, avatar_url, role, created_at, updated_at')
     .single();
 
   if (error) {

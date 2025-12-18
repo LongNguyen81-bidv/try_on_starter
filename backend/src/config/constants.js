@@ -10,3 +10,4 @@ export const HTTP_STATUS = {
 };
 
 export const API_VERSION = 'v1';
+

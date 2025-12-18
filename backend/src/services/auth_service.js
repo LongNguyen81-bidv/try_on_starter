@@ -55,6 +55,7 @@ export const loginUser = async (email, password) => {
   const token = generateToken({
     id: profile.id,
     email: profile.email,
+    role: profile.role || 'user',
   });
 
   return {
@@ -63,6 +64,7 @@ export const loginUser = async (email, password) => {
       id: profile.id,
       email: profile.email,
       full_name: profile.full_name,
+      role: profile.role || 'user',
     },
   };
 };

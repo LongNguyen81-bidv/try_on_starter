@@ -1,18 +1,25 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
+import { isAuthenticated, isAdmin } from '../utils/token.js';
+import { logout } from '../services/auth_service.js';
+import AuthModal from '../components/AuthModal.jsx';
 
-function Header() {
+function Header({ onLogout }) {
+  const authenticated = isAuthenticated();
+  const admin = isAdmin();
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50 bg-white/95 backdrop-blur-sm shadow-sm">
       <div className="container mx-auto px-4 py-4">
         <nav className="flex items-center justify-between">
-          <div className="flex items-center space-x-2">
+          <Link to="/" className="flex items-center space-x-2">
             <div className="w-10 h-10 bg-gradient-to-br from-pink-500 to-purple-600 rounded-lg flex items-center justify-center">
               <span className="text-white font-bold text-xl">T</span>
             </div>
             <span className="text-xl font-bold bg-gradient-to-r from-pink-600 to-purple-600 bg-clip-text text-transparent">
               Try-On
             </span>
-          </div>
+          </Link>
           <div className="hidden md:flex items-center space-x-8">
             <a href="#features" className="text-gray-700 hover:text-pink-600 transition-colors">
               Tính năng
@@ -20,18 +27,45 @@ function Header() {
             <a href="#about" className="text-gray-700 hover:text-pink-600 transition-colors">
               Giới thiệu
             </a>
-            <Link
-              to="/login"
-              className="text-gray-700 hover:text-pink-600 transition-colors"
-            >
-              Đăng nhập
-            </Link>
-            <Link
-              to="/register"
-              className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full hover:shadow-lg transition-all transform hover:scale-105"
-            >
-              Bắt đầu
-            </Link>
+            {admin && (
+              <Link
+                to="/admin"
+                className="text-gray-700 hover:text-pink-600 transition-colors font-medium"
+              >
+                Admin Dashboard
+              </Link>
+            )}
+            {authenticated ? (
+              <>
+                <Link
+                  to="/profile"
+                  className="text-gray-700 hover:text-pink-600 transition-colors"
+                >
+                  Hồ sơ
+                </Link>
+                <button
+                  onClick={onLogout}
+                  className="text-gray-700 hover:text-pink-600 transition-colors"
+                >
+                  Đăng xuất
+                </button>
+              </>
+            ) : (
+              <>
+                <Link
+                  to="/login"
+                  className="text-gray-700 hover:text-pink-600 transition-colors"
+                >
+                  Đăng nhập
+                </Link>
+                <Link
+                  to="/register"
+                  className="bg-gradient-to-r from-pink-500 to-purple-600 text-white px-6 py-2 rounded-full hover:shadow-lg transition-all transform hover:scale-105"
+                >
+                  Bắt đầu
+                </Link>
+              </>
+            )}
           </div>
           <button className="md:hidden text-gray-700">
             <svg
@@ -359,12 +393,28 @@ function Footer() {
 }
 
 function LandingPage() {
+  const [isAuthModalOpen, setIsAuthModalOpen] = useState(false);
+  const [authModalMode, setAuthModalMode] = useState('login');
+  const [authKey, setAuthKey] = useState(0);
+
+  const handleLogout = () => {
+    logout();
+    setAuthKey((prev) => prev + 1);
+    setAuthModalMode('login');
+    setIsAuthModalOpen(true);
+  };
+
   return (
     <div className="min-h-screen">
-      <Header />
+      <Header key={authKey} onLogout={handleLogout} />
       <HeroSection />
       <FeaturesSection />
       <Footer />
+      <AuthModal
+        isOpen={isAuthModalOpen}
+        onClose={() => setIsAuthModalOpen(false)}
+        initialMode={authModalMode}
+      />
     </div>
   );
 }

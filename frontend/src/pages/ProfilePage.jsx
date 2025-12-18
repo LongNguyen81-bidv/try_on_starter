@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { logout } from '../services/auth_service.js';
 import { getProfile, updateProfile, uploadAvatar } from '../services/profile_service.js';
+import { isAdmin } from '../utils/token.js';
 
 function ProfilePage() {
   const navigate = useNavigate();
@@ -149,12 +150,22 @@ function ProfilePage() {
         <div className="bg-white rounded-2xl shadow-xl p-8">
           <div className="flex justify-between items-center mb-6">
             <h1 className="text-3xl font-extrabold text-gray-900">Hồ sơ của tôi</h1>
-            <button
-              onClick={handleLogout}
-              className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
-            >
-              Đăng xuất
-            </button>
+            <div className="flex items-center gap-3">
+              {isAdmin() && (
+                <Link
+                  to="/admin"
+                  className="px-4 py-2 text-sm font-medium text-white bg-purple-600 hover:bg-purple-700 rounded-lg transition-colors"
+                >
+                  Admin Dashboard
+                </Link>
+              )}
+              <button
+                onClick={handleLogout}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 rounded-lg transition-colors"
+              >
+                Đăng xuất
+              </button>
+            </div>
           </div>
 
           {error && (

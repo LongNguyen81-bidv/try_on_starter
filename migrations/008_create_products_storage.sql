@@ -1,0 +1,77 @@
+-- Migration: Create products storage bucket
+-- Description: Tạo storage bucket và policies cho products (Sprint 2 - Task 2)
+-- Created: 2025-12-16
+-- Note: Script này cần chạy trên Supabase Dashboard hoặc qua Supabase CLI
+--       Vì storage operations không thể thực hiện qua SQL trực tiếp
+
+-- ============================================
+-- HƯỚNG DẪN THỰC HIỆN TRÊN SUPABASE DASHBOARD
+-- ============================================
+-- 
+-- 1. Vào Supabase Dashboard > Storage
+-- 2. Click "New bucket"
+-- 3. Đặt tên: "products"
+-- 4. Public: ON (checked) - để frontend có thể đọc ảnh công khai
+-- 5. File size limit: 5242880 (5MB)
+-- 6. Allowed MIME types: image/jpeg,image/jpg,image/png
+-- 7. Click "Create bucket"
+--
+-- ============================================
+-- POLICIES (Row Level Security)
+-- ============================================
+-- LƯU Ý QUAN TRỌNG: 
+-- Project này KHÔNG sử dụng Supabase Auth, chỉ dùng JWT tự quản lý.
+-- Do đó, storage policies với auth.uid() sẽ KHÔNG hoạt động.
+-- 
+-- KHUYẾN NGHỊ CHO PROJECT NÀY:
+-- 1. Tạo bucket "products" với Public = ON (để frontend đọc được ảnh)
+-- 2. Tắt RLS hoặc tạo policies đơn giản:
+--    - SELECT: Public (mọi người có thể xem ảnh)
+--    - INSERT/UPDATE/DELETE: Chỉ Admin (qua backend với service role key)
+-- 3. Backend sử dụng SUPABASE_SERVICE_ROLE_KEY để:
+--    - Upload file: sử dụng service role key (chỉ khi user là admin)
+--    - Generate public URL: URL công khai, frontend có thể đọc trực tiếp
+-- 4. File path format: products/{product_id}/image.{ext}
+-- 5. Khi xóa sản phẩm, backend xóa ảnh tương ứng trong Storage
+--
+-- ============================================
+-- POLICIES SQL (Nếu muốn dùng RLS)
+-- ============================================
+-- Lưu ý: Các policies này chỉ hoạt động nếu dùng Supabase Auth
+-- Với JWT tự quản lý, nên tắt RLS và kiểm soát quyền ở Backend
+--
+-- -- Policy: Public có thể đọc ảnh sản phẩm
+-- CREATE POLICY "Public can read product images"
+-- ON storage.objects
+-- FOR SELECT
+-- TO public
+-- USING (bucket_id = 'products');
+--
+-- -- Policy: Chỉ Admin mới upload được (qua authenticated role)
+-- CREATE POLICY "Admin can upload product images"
+-- ON storage.objects
+-- FOR INSERT
+-- TO authenticated
+-- WITH CHECK (
+--     bucket_id = 'products' AND
+--     EXISTS (
+--         SELECT 1 FROM profiles
+--         WHERE id::text = (auth.uid())::text
+--         AND role = 'admin'
+--     )
+-- );
+--
+-- -- Policy: Chỉ Admin mới xóa được
+-- CREATE POLICY "Admin can delete product images"
+-- ON storage.objects
+-- FOR DELETE
+-- TO authenticated
+-- USING (
+--     bucket_id = 'products' AND
+--     EXISTS (
+--         SELECT 1 FROM profiles
+--         WHERE id::text = (auth.uid())::text
+--         AND role = 'admin'
+--     )
+-- );
+

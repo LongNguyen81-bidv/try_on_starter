@@ -1,7 +1,9 @@
-# Database Schema Design - Sprint 1
+# Database Schema Design
 
 ## Tổng quan
-Schema này được thiết kế cho Sprint 1, hỗ trợ các tính năng authentication và profile management (US-01, US-02).
+Schema này được thiết kế cho toàn bộ project, bao gồm:
+- Sprint 1: Authentication và profile management (US-01, US-02)
+- Sprint 2: Quản lý kho hàng (US-03, US-04)
 
 ## Bảng: profiles
 
@@ -63,15 +65,120 @@ Mỗi user có một thư mục riêng với user_id làm tên thư mục, chứ
 - **Read policy**: User có thể đọc ảnh của chính họ, admin có thể đọc tất cả
 - **Delete policy**: User có thể xóa ảnh của chính họ, admin có thể xóa tất cả
 
+## Bảng: categories (Sprint 2)
+
+Bảng `categories` lưu trữ danh mục sản phẩm (Áo thun, Váy, Quần Jeans, ...).
+
+### Cấu trúc bảng
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|-----|--------------|-----------|-------|
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Định danh duy nhất của category |
+| name | TEXT | NOT NULL, UNIQUE | Tên danh mục, phải unique |
+| slug | TEXT | NOT NULL, UNIQUE | Slug dùng cho URL (lowercase, không dấu, nối bằng gạch ngang) |
+| description | TEXT | NULL | Mô tả danh mục (tùy chọn) |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Thời gian tạo |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Thời gian cập nhật cuối |
+
+### Indexes
+
+- `idx_categories_name`: Index trên cột `name` để tăng tốc độ tìm kiếm
+- `idx_categories_slug`: Index trên cột `slug` để tối ưu truy vấn theo URL
+- `idx_categories_created_at`: Index trên cột `created_at` để tối ưu truy vấn theo thời gian
+
+### Constraints
+
+- `categories_name_key`: Unique constraint trên `name`
+- `categories_slug_key`: Unique constraint trên `slug`
+
+### Triggers
+
+- `update_categories_updated_at`: Trigger tự động cập nhật `updated_at` khi có thay đổi dữ liệu
+
+## Bảng: products (Sprint 2)
+
+Bảng `products` lưu trữ thông tin sản phẩm.
+
+### Cấu trúc bảng
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|-----|--------------|-----------|-------|
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Định danh duy nhất của product |
+| category_id | UUID | NOT NULL, FOREIGN KEY | ID danh mục, tham chiếu đến categories.id |
+| name | TEXT | NOT NULL | Tên sản phẩm |
+| price | NUMERIC(10,2) | NOT NULL, CHECK (price >= 0) | Giá sản phẩm (VNĐ) |
+| description | TEXT | NULL | Mô tả sản phẩm (tùy chọn) |
+| image_url | TEXT | NOT NULL | URL đến ảnh sản phẩm flat-lay trong Supabase Storage |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Thời gian tạo |
+| updated_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Thời gian cập nhật cuối |
+
+### Indexes
+
+- `idx_products_category_id`: Index trên cột `category_id` để tối ưu join và filter
+- `idx_products_name`: Index trên cột `name` để tăng tốc độ tìm kiếm
+- `idx_products_price`: Index trên cột `price` để tối ưu truy vấn theo giá
+- `idx_products_created_at`: Index trên cột `created_at` để tối ưu truy vấn theo thời gian
+
+### Constraints
+
+- `fk_products_category`: Foreign key constraint, `category_id` references `categories.id` ON DELETE RESTRICT
+- `products_price_check`: Check constraint đảm bảo price >= 0
+
+### Triggers
+
+- `update_products_updated_at`: Trigger tự động cập nhật `updated_at` khi có thay đổi dữ liệu
+
+## Storage: products (Sprint 2)
+
+Bucket lưu trữ ảnh sản phẩm dạng flat-lay (trải phẳng).
+
+### Cấu hình
+
+- **Bucket name**: `products`
+- **Public**: `true` (public access for read)
+- **File size limit**: 5MB
+- **Allowed MIME types**: image/jpeg, image/jpg, image/png
+
+### Cấu trúc thư mục
+
+```
+products/
+  └── {product_id}/
+      └── image.{ext}
+```
+
+Mỗi sản phẩm có một thư mục riêng với product_id làm tên thư mục, chứa file ảnh sản phẩm.
+
+### Policies (Row Level Security)
+
+- **Read policy**: Public có thể đọc tất cả ảnh sản phẩm
+- **Upload policy**: Chỉ Admin mới upload được (qua backend với service role key)
+- **Delete policy**: Chỉ Admin mới xóa được (qua backend với service role key)
+
 ## Quan hệ dữ liệu
 
 - `profiles.id` → `avatars/{user_id}/`: Một profile có một avatar (1:1)
+- `categories.id` → `products.category_id`: Một category có nhiều products (1:N)
+- `products.id` → `products/{product_id}/`: Một product có một ảnh (1:1)
+
+## Row Level Security (RLS)
+
+### Categories
+- **SELECT**: Public (mọi người có thể xem)
+- **INSERT/UPDATE/DELETE**: Chỉ Admin (kiểm tra qua Backend middleware)
+
+### Products
+- **SELECT**: Public (mọi người có thể xem)
+- **INSERT/UPDATE/DELETE**: Chỉ Admin (kiểm tra qua Backend middleware)
+
+**Lưu ý**: Vì project dùng JWT tự quản lý (không dùng Supabase Auth), RLS policies sẽ không hoạt động trực tiếp. Backend phải kiểm tra role ở middleware (`verifyAdmin`). RLS policies chỉ là lớp bảo vệ thêm nếu sau này migrate sang Supabase Auth.
 
 ## Ghi chú
 
 - Không sử dụng bảng `auth.users` mặc định của Supabase
 - Email được lưu ở dạng lowercase để đảm bảo tính nhất quán
 - Password luôn được hash bằng bcrypt trước khi lưu
-- Avatar URL được lưu dạng full URL từ Supabase Storage
+- Avatar URL và Product Image URL được lưu dạng full URL từ Supabase Storage
 - Timestamps sử dụng TIMESTAMPTZ để hỗ trợ timezone
+- Foreign key `products.category_id` có ON DELETE RESTRICT để ngăn xóa category đang có sản phẩm
 

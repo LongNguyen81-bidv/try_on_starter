@@ -82,3 +82,88 @@ export const validateUpdateProfileInput = (data) => {
   return updateProfileSchema.parse(data);
 };
 
+export const createCategorySchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Tên danh mục không được để trống')
+    .max(50, 'Tên danh mục không được vượt quá 50 ký tự')
+    .trim(),
+  description: z
+    .string()
+    .max(500, 'Mô tả không được vượt quá 500 ký tự')
+    .transform((val) => (val === '' ? null : val))
+    .nullable()
+    .optional(),
+});
+
+export const updateCategorySchema = z.object({
+  name: z
+    .string()
+    .min(1, 'Tên danh mục không được để trống')
+    .max(50, 'Tên danh mục không được vượt quá 50 ký tự')
+    .trim()
+    .optional(),
+  description: z
+    .string()
+    .max(500, 'Mô tả không được vượt quá 500 ký tự')
+    .transform((val) => (val === '' ? null : val))
+    .nullable()
+    .optional(),
+});
+
+export const validateCreateCategoryInput = (data) => {
+  return createCategorySchema.parse(data);
+};
+
+export const validateUpdateCategoryInput = (data) => {
+  return updateCategorySchema.parse(data);
+};
+
+export const createProductSchema = z.object({
+  category_id: z.string().uuid('ID danh mục không hợp lệ'),
+  name: z
+    .string()
+    .min(1, 'Tên sản phẩm không được để trống')
+    .max(255, 'Tên sản phẩm không được vượt quá 255 ký tự')
+    .trim(),
+  price: z
+    .number({ required_error: 'Giá sản phẩm là bắt buộc', invalid_type_error: 'Giá sản phẩm phải là số' })
+    .nonnegative('Giá sản phẩm phải >= 0'),
+  description: z
+    .string()
+    .max(1000, 'Mô tả không được vượt quá 1000 ký tự')
+    .transform((val) => (val === '' ? null : val))
+    .nullable()
+    .optional(),
+  image_url: z.string().url('URL ảnh không hợp lệ').optional(),
+});
+
+export const updateProductSchema = z.object({
+  category_id: z.string().uuid('ID danh mục không hợp lệ').optional(),
+  name: z
+    .string()
+    .min(1, 'Tên sản phẩm không được để trống')
+    .max(255, 'Tên sản phẩm không được vượt quá 255 ký tự')
+    .trim()
+    .optional(),
+  price: z
+    .number({ invalid_type_error: 'Giá sản phẩm phải là số' })
+    .nonnegative('Giá sản phẩm phải >= 0')
+    .optional(),
+  description: z
+    .string()
+    .max(1000, 'Mô tả không được vượt quá 1000 ký tự')
+    .transform((val) => (val === '' ? null : val))
+    .nullable()
+    .optional(),
+  image_url: z.string().url('URL ảnh không hợp lệ').optional(),
+});
+
+export const validateCreateProductInput = (data) => {
+  return createProductSchema.parse(data);
+};
+
+export const validateUpdateProductInput = (data) => {
+  return updateProductSchema.parse(data);
+};
+
