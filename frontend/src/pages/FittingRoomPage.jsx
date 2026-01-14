@@ -4,6 +4,7 @@ import { getProducts } from '../services/product_service.js';
 import { tryOnProduct } from '../services/tryon_service.js';
 import { getProfile } from '../services/profile_service.js';
 import { logout } from '../services/auth_service.js';
+import { addToCart } from '../services/cart_service.js';
 
 function FittingRoomPage() {
   const navigate = useNavigate();
@@ -18,6 +19,8 @@ function FittingRoomPage() {
   const [categoryId, setCategoryId] = useState(null);
   const [touchStart, setTouchStart] = useState(null);
   const [touchEnd, setTouchEnd] = useState(null);
+  const [addingToCart, setAddingToCart] = useState(false);
+  const [cartMessage, setCartMessage] = useState({ type: '', text: '' });
 
   const currentProduct = products[currentIndex] || null;
 
@@ -283,12 +286,74 @@ function FittingRoomPage() {
                     </span>
                   </div>
                   {currentProduct.category && (
-                    <div className="mb-6">
+                    <div className="mb-4">
                       <span className="inline-block px-3 py-1 bg-purple-100 text-purple-700 rounded-full text-sm">
                         {currentProduct.category.name}
                       </span>
                     </div>
                   )}
+
+                  {/* Add to Cart Button */}
+                  <button
+                    onClick={async () => {
+                      if (addingToCart || !currentProduct) return;
+                      setAddingToCart(true);
+                      setCartMessage({ type: '', text: '' });
+                      try {
+                        await addToCart(currentProduct.id, 1);
+                        setCartMessage({ type: 'success', text: '🎉 Đã thêm vào giỏ hàng!' });
+                        setTimeout(() => setCartMessage({ type: '', text: '' }), 3000);
+                      } catch (err) {
+                        setCartMessage({ type: 'error', text: err.message || 'Không thể thêm vào giỏ' });
+                        setTimeout(() => setCartMessage({ type: '', text: '' }), 3000);
+                      } finally {
+                        setAddingToCart(false);
+                      }
+                    }}
+                    disabled={addingToCart || isLoading}
+                    className={`w-full py-3 px-6 rounded-lg font-semibold text-white transition-all duration-300 flex items-center justify-center gap-2 shadow-lg ${addingToCart
+                        ? 'bg-gray-400 cursor-not-allowed'
+                        : 'bg-gradient-to-r from-purple-600 to-pink-500 hover:from-purple-700 hover:to-pink-600 hover:shadow-xl transform hover:-translate-y-0.5'
+                      }`}
+                  >
+                    {addingToCart ? (
+                      <>
+                        <svg className="animate-spin h-5 w-5" viewBox="0 0 24 24">
+                          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+                        </svg>
+                        Đang thêm...
+                      </>
+                    ) : (
+                      <>
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                        </svg>
+                        Thêm vào giỏ
+                      </>
+                    )}
+                  </button>
+
+                  {/* Cart Message Toast */}
+                  {cartMessage.text && (
+                    <div className={`mt-3 p-3 rounded-lg text-sm font-medium animate-pulse ${cartMessage.type === 'success'
+                        ? 'bg-green-100 text-green-800 border border-green-200'
+                        : 'bg-red-100 text-red-800 border border-red-200'
+                      }`}>
+                      {cartMessage.text}
+                    </div>
+                  )}
+
+                  {/* Link to Cart */}
+                  <button
+                    onClick={() => navigate('/cart')}
+                    className="w-full mt-3 py-2 px-4 rounded-lg font-medium text-purple-600 border-2 border-purple-200 hover:border-purple-400 hover:bg-purple-50 transition-colors flex items-center justify-center gap-2"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                    </svg>
+                    Xem giỏ hàng
+                  </button>
                   {currentProduct.image_url && (
                     <div className="mt-6">
                       <p className="text-sm text-gray-500 mb-2">Ảnh sản phẩm:</p>

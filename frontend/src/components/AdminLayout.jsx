@@ -17,6 +17,7 @@ function AdminLayout() {
     { path: '/admin', label: 'Dashboard', icon: '📊' },
     { path: '/admin/categories', label: 'Quản lý Danh mục', icon: '📁' },
     { path: '/admin/products', label: 'Quản lý Sản phẩm', icon: '👕' },
+    { path: '/admin/orders', label: 'Quản lý Đơn hàng', icon: '📦' },
   ];
 
   return (
@@ -32,11 +33,10 @@ function AdminLayout() {
                 <li key={item.path}>
                   <Link
                     to={item.path}
-                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${
-                      isActive(item.path)
+                    className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-colors ${isActive(item.path)
                         ? 'bg-purple-600 text-white'
                         : 'text-gray-700 hover:bg-purple-50'
-                    }`}
+                      }`}
                   >
                     <span className="text-xl">{item.icon}</span>
                     <span className="font-medium">{item.label}</span>

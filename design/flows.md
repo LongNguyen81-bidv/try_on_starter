@@ -646,3 +646,363 @@ Response (Success):
 - Timestamps sử dụng TIMESTAMPTZ để hỗ trợ timezone
 - CORS được cấu hình đúng origin (FRONTEND_URL)
 
+---
+
+# Virtual Try-On Flows - Sprint 3
+
+## Tổng quan
+Tài liệu này mô tả các luồng xử lý cho tính năng thử đồ ảo (Virtual Try-On) trong Sprint 3, hỗ trợ US-05 và US-06.
+
+---
+
+## 1. Flow Thử đồ (Try-On)
+
+### 1.1. Luồng chính (Happy Path)
+
+```
+User → Frontend Fitting Room Page
+  ↓
+Check: User đã có ảnh toàn thân (avatar_url) chưa?
+  ↓
+[Chưa có] → Hiển thị popup → Redirect về /profile
+  ↓
+[Có avatar] → Load danh sách sản phẩm
+  ↓
+User chọn sản phẩm hoặc tự động chọn sản phẩm đầu tiên
+  ↓
+POST /api/v1/try-on
+  Headers: { Authorization: "Bearer <token>" }
+  Body: { product_id: "uuid" }
+  ↓
+Backend:
+  1. JWT Middleware verify token → Extract userId
+  2. Validate product_id (format UUID)
+  3. Check profile có avatar_url không?
+  4. Check product tồn tại và có image_url?
+  5. Query bảng try_on_results (Cache lookup)
+     ↓
+  [Cache HIT] → Return URL ngay lập tức
+     ↓
+  [Cache MISS] → Gọi AI Service:
+     a. Convert ảnh user + ảnh sản phẩm sang base64
+     b. Gửi request đến Gemini AI
+     c. Nhận ảnh kết quả (base64)
+     d. Upload lên Supabase Storage
+     e. Lưu URL vào try_on_results
+     f. Return URL mới
+  ↓
+Response: 200 OK
+  {
+    success: true,
+    data: {
+      generated_image_url: "https://...",
+      cached: true/false,
+      product: { id, name, price, category }
+    }
+  }
+  ↓
+Frontend:
+  - Hiển thị ảnh kết quả lên màn hình
+  - Lưu vào imageCache (client-side)
+```
+
+### 1.2. Luồng lỗi
+
+**User chưa có ảnh toàn thân:**
+```
+POST /api/v1/try-on
+  ↓
+Backend check profile.avatar_url → null
+  ↓
+Response: 400 Bad Request
+  { success: false, message: "Bạn cần cập nhật ảnh toàn thân để sử dụng tính năng thử đồ" }
+  ↓
+Frontend hiển thị popup → Redirect /profile
+```
+
+**Sản phẩm không tồn tại:**
+```
+POST /api/v1/try-on
+  ↓
+Backend query product → Not found
+  ↓
+Response: 404 Not Found
+  { success: false, message: "Không tìm thấy sản phẩm" }
+```
+
+**AI Service lỗi/timeout:**
+```
+Backend gọi Gemini AI → Timeout sau 60s
+  ↓
+Response: 500 Internal Server Error
+  { success: false, message: "AI xử lý quá lâu. Vui lòng thử lại sau." }
+  ↓
+Frontend:
+  - Hiển thị thông báo lỗi thân thiện
+  - Giữ nguyên ảnh gốc của user
+```
+
+**AI quota exceeded:**
+```
+Backend gọi Gemini AI → Quota/Rate limit error
+  ↓
+Response: 500 Internal Server Error
+  { success: false, message: "Hệ thống AI đang bận. Vui lòng thử lại sau." }
+```
+
+### 1.3. API Endpoint
+
+**POST /api/v1/try-on**
+
+Headers:
+```
+Authorization: Bearer <token>
+Content-Type: application/json
+```
+
+Request:
+```json
+{
+  "product_id": "550e8400-e29b-41d4-a716-446655440000"
+}
+```
+
+Response (Success - Cache Hit):
+```json
+{
+  "success": true,
+  "message": "Lấy ảnh từ cache thành công",
+  "data": {
+    "generated_image_url": "https://xxx.supabase.co/storage/v1/object/public/tryon-results/user-id/product-id.png",
+    "cached": true,
+    "product": {
+      "id": "uuid",
+      "name": "Áo thun trắng",
+      "price": 250000,
+      "category": { "id": "uuid", "name": "Áo thun" }
+    }
+  }
+}
+```
+
+Response (Success - New Generation):
+```json
+{
+  "success": true,
+  "message": "Tạo ảnh thử đồ thành công",
+  "data": {
+    "generated_image_url": "https://...",
+    "cached": false,
+    "product": { ... }
+  }
+}
+```
+
+---
+
+## 2. Flow Chuyển đổi sản phẩm (Navigation)
+
+### 2.1. Luồng chính
+
+```
+User đang xem sản phẩm A
+  ↓
+User bấm Next/Prev hoặc Swipe
+  ↓
+Frontend:
+  1. Update currentIndex
+  2. Update UI text (tên, giá sản phẩm B) ngay lập tức
+  3. Check imageCache[productB.id]
+     ↓
+  [Cache HIT] → Hiển thị ảnh ngay từ cache
+     ↓
+  [Cache MISS] → 
+     a. Hiện Loading overlay ("AI đang ngắm bạn...")
+     b. Gọi API POST /api/v1/try-on với product_id mới
+     c. Nhận URL → Lưu vào imageCache
+     d. Hiển thị ảnh mới → Tắt loading
+```
+
+### 2.2. Swipe Detection
+
+```javascript
+// Touch events flow
+onTouchStart → Lưu touchStart.clientX
+  ↓
+onTouchMove → Cập nhật touchEnd.clientX
+  ↓
+onTouchEnd → 
+  distance = touchStart - touchEnd
+  ↓
+[distance > 50px] → handleNext()
+[distance < -50px] → handlePrev()
+[|distance| < 50px] → Không làm gì
+```
+
+### 2.3. Client-side Caching
+
+```javascript
+const [imageCache, setImageCache] = useState({});
+// Structure: { [productId]: "generated_image_url", ... }
+
+// Khi load ảnh mới:
+setImageCache(prev => ({
+  ...prev,
+  [productId]: imageUrl
+}));
+
+// Khi user quay lại sản phẩm đã xem:
+if (imageCache[productId]) {
+  setTryOnImageUrl(imageCache[productId]); // Instant display
+  return;
+}
+```
+
+---
+
+## 3. Database Cache Flow
+
+### 3.1. Cache Lookup
+
+```sql
+-- Query pattern for cache lookup
+SELECT generated_image_url 
+FROM try_on_results 
+WHERE user_id = $1 AND product_id = $2
+LIMIT 1;
+```
+
+### 3.2. Cache Insert/Update (Upsert)
+
+```sql
+-- Upsert pattern (insert or update on conflict)
+INSERT INTO try_on_results (user_id, product_id, generated_image_url, created_at)
+VALUES ($1, $2, $3, NOW())
+ON CONFLICT (user_id, product_id) 
+DO UPDATE SET 
+  generated_image_url = EXCLUDED.generated_image_url,
+  created_at = NOW();
+```
+
+### 3.3. Cache Invalidation
+
+```
+-- Khi user thay đổi avatar (avatar_url):
+-- Cần xóa tất cả try_on_results của user đó
+DELETE FROM try_on_results WHERE user_id = $1;
+```
+
+---
+
+## 4. AI Service Flow (Gemini)
+
+### 4.1. Request Flow
+
+```
+Input:
+  - userImageUrl: URL ảnh toàn thân của user
+  - productImageUrl: URL ảnh sản phẩm (flat-lay)
+  - categoryName: Tên danh mục (VD: "Áo thun")
+  ↓
+Convert images to base64
+  ↓
+Construct prompt for Gemini
+  ↓
+Send request to Gemini 2.0 Flash (multimodal)
+  - Model: gemini-2.0-flash-exp
+  - responseModalities: ['Text', 'Image']
+  ↓
+Parse response → Extract generated image (base64)
+  ↓
+Upload to Supabase Storage
+  ↓
+Return public URL
+```
+
+### 4.2. Prompt Template
+
+```
+You are a virtual try-on AI assistant. Your task is to generate a realistic image of a person wearing a specific clothing item.
+
+INSTRUCTIONS:
+1. Look at the first image - this is a photo of a person (the model).
+2. Look at the second image - this is the clothing item ({categoryName}) to be worn.
+3. Generate a NEW image showing the SAME person from the first image, but now wearing the clothing item from the second image.
+4. Keep the person's face, body shape, skin tone, and pose EXACTLY the same.
+5. The clothing should fit naturally on the person's body.
+6. Maintain realistic lighting and shadows.
+7. The background can be a simple, clean backdrop.
+
+Please generate the try-on result image now.
+```
+
+### 4.3. Error Handling
+
+| Error Type | HTTP Status | Message |
+|------------|-------------|---------|
+| GEMINI_API_KEY missing | 500 | Lỗi cấu hình AI service |
+| Safety block | 400 | Ảnh không phù hợp với yêu cầu của AI |
+| Quota exceeded | 500 | Hệ thống AI đang bận. Vui lòng thử lại sau. |
+| Timeout (60s) | 500 | AI xử lý quá lâu. Vui lòng thử lại sau. |
+| Generation failed | 500 | AI không thể tạo ảnh thử đồ. Vui lòng thử lại. |
+
+---
+
+## 5. Storage Flow
+
+### 5.1. Upload Generated Image
+
+```
+File path: tryon-results/{userId}/{productId}.{ext}
+  ↓
+Supabase Storage upload with upsert=true
+  ↓
+Get public URL
+  ↓
+Add cache buster: ?t={timestamp}
+  ↓
+Return URL
+```
+
+### 5.2. Cleanup (Optional)
+
+```
+Khi xóa sản phẩm → CASCADE delete try_on_results records
+Khi xóa user → CASCADE delete records + storage files
+```
+
+---
+
+## 6. Security Considerations
+
+### 6.1. Authentication
+- Tất cả try-on endpoints yêu cầu JWT token
+- Token phải valid và chưa expired
+
+### 6.2. Rate Limiting (Recommended)
+- Limit: 10 requests/user/phút
+- Để tránh lạm dụng AI và tiết kiệm chi phí
+
+### 6.3. Input Validation
+- product_id phải là UUID hợp lệ
+- User phải có avatar_url
+- Product phải có image_url
+
+### 6.4. Storage Security
+- Try-on results bucket: Public read
+- Write access: Backend service role only
+
+---
+
+## 7. Performance Optimization
+
+### 7.1. Cache Strategy
+- **Level 1**: Client-side cache (React state) - Instant
+- **Level 2**: Database cache (try_on_results) - ~50ms
+- **Level 3**: AI generation - 5-20 seconds
+
+### 7.2. Recommendations
+- Prefetch next/prev product images trong background
+- Lazy load product list với pagination
+- Compress images trước khi upload
+

@@ -56,6 +56,8 @@ Cập nhật các giá trị trong `.env`:
 - `SUPABASE_ANON_KEY`: Anonymous key từ Supabase
 - `SUPABASE_SERVICE_ROLE_KEY`: Service role key từ Supabase
 - `FRONTEND_URL`: URL của frontend (mặc định: http://localhost:5173)
+- `GEMINI_API_KEY`: API key từ Google AI Studio (cho tính năng Virtual Try-On, lấy từ: https://aistudio.google.com/app/apikey)
+
 
 #### 2.3. Chạy backend
 ```bash

@@ -182,3 +182,99 @@ Mỗi sản phẩm có một thư mục riêng với product_id làm tên thư m
 - Timestamps sử dụng TIMESTAMPTZ để hỗ trợ timezone
 - Foreign key `products.category_id` có ON DELETE RESTRICT để ngăn xóa category đang có sản phẩm
 
+---
+
+## Bảng: try_on_results (Sprint 3)
+
+Bảng `try_on_results` lưu trữ kết quả thử đồ ảo (AI generated images) để cache và tối ưu chi phí.
+
+### Cấu trúc bảng
+
+| Cột | Kiểu dữ liệu | Ràng buộc | Mô tả |
+|-----|--------------|-----------|-------|
+| id | UUID | PRIMARY KEY, DEFAULT gen_random_uuid() | Định danh duy nhất của kết quả |
+| user_id | UUID | NOT NULL, FOREIGN KEY | ID user thực hiện thử đồ, references profiles.id |
+| product_id | UUID | NOT NULL, FOREIGN KEY | ID sản phẩm được thử, references products.id |
+| generated_image_url | TEXT | NOT NULL | URL ảnh kết quả (user mặc sản phẩm) từ AI |
+| created_at | TIMESTAMPTZ | NOT NULL, DEFAULT now() | Thời gian tạo kết quả |
+
+### Indexes
+
+- `idx_try_on_results_user_id`: Index trên cột `user_id` để tối ưu lookup theo user
+- `idx_try_on_results_product_id`: Index trên cột `product_id` để tối ưu lookup theo sản phẩm
+- `idx_try_on_results_user_product`: Composite index cho fast cache lookup
+- `idx_try_on_results_created_at`: Index cho ordering theo thời gian
+
+### Constraints
+
+- `uq_try_on_user_product`: Unique constraint trên cặp `(user_id, product_id)` - mỗi user chỉ có 1 kết quả cho 1 sản phẩm
+- `fk_try_on_user`: Foreign key, `user_id` references `profiles.id` ON DELETE CASCADE
+- `fk_try_on_product`: Foreign key, `product_id` references `products.id` ON DELETE CASCADE
+
+### Cách sử dụng
+
+```sql
+-- Cache lookup: Kiểm tra đã có kết quả chưa
+SELECT generated_image_url 
+FROM try_on_results 
+WHERE user_id = $1 AND product_id = $2;
+
+-- Upsert: Thêm hoặc cập nhật kết quả
+INSERT INTO try_on_results (user_id, product_id, generated_image_url)
+VALUES ($1, $2, $3)
+ON CONFLICT (user_id, product_id) 
+DO UPDATE SET generated_image_url = EXCLUDED.generated_image_url, created_at = NOW();
+
+-- Invalidate cache khi user đổi avatar
+DELETE FROM try_on_results WHERE user_id = $1;
+```
+
+## Storage: tryon-results (Sprint 3)
+
+Bucket lưu trữ ảnh kết quả thử đồ ảo (AI generated).
+
+### Cấu hình
+
+- **Bucket name**: `tryon-results`
+- **Public**: `true` (public access for read - frontend hiển thị)
+- **File size limit**: 10MB (AI generated images có thể lớn)
+- **Allowed MIME types**: image/jpeg, image/jpg, image/png, image/webp
+
+### Cấu trúc thư mục
+
+```
+tryon-results/
+  └── {user_id}/
+      └── {product_id}.{ext}
+```
+
+Mỗi user có một thư mục riêng, mỗi sản phẩm đã thử có 1 file ảnh.
+
+### Policies (Row Level Security)
+
+- **Read policy**: Public có thể đọc tất cả ảnh kết quả (cần để frontend hiển thị)
+- **Upload policy**: Backend service role only (thông qua Supabase service key)
+- **Delete policy**: Backend service role only
+
+## Quan hệ dữ liệu (Updated)
+
+```
+profiles.id ─────────────────────────────────────────┐
+     │                                                │
+     ├──→ avatars/{user_id}/ (1:1)                   │
+     │                                                │
+     └──→ try_on_results.user_id ←────────────────────┤
+                    │                                 │
+                    ├──→ tryon-results/{user_id}/ (1:N)
+                    │                                 
+products.id ─────────────────────────────────────────┘
+     │
+     ├──→ products/{product_id}/ (1:1)
+     │
+     └──→ try_on_results.product_id
+```
+
+- `profiles.id` → `try_on_results.user_id`: Một user có nhiều try-on results (1:N)
+- `products.id` → `try_on_results.product_id`: Một product có nhiều try-on results (1:N)
+- Unique constraint `(user_id, product_id)`: Mỗi user-product pair chỉ có 1 record (MVP)
+

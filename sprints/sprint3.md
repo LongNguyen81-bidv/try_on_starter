@@ -6,11 +6,11 @@ User Stories: US-05, US-06
 
 ## Tasks
 
-### 1. Nghiên cứu & Thiết lập AI Service (Priority: High)
+### 1. Nghiên cứu & Thiết lập AI Gemini (Priority: High)
 **Mô tả:** Lựa chọn và tích hợp dịch vụ AI xử lý hình ảnh (Virtual Try-On Model).
 
 **Công việc:**
-- [ ] Nghiên cứu và chọn model AI phù hợp (Gợi ý: IDM-VTON hoặc OOTDiffusion qua nền tảng Replicate hoặc Fal.ai)
+- [ ] Nghiên cứu và chọn model AI phù hợp (Gợi ý: Google Gemini AI)
 - [ ] Đăng ký tài khoản, lấy API Key và cấu hình biến môi trường (`AI_API_KEY`, `AI_SERVICE_URL`)
 - [ ] Xây dựng module `AIService` trên Backend (NodeJS) để giao tiếp với AI Provider
 - [ ] Viết hàm gửi request: Input (Ảnh người, Ảnh áo, Category) -> Output (URL ảnh đã mặc)

@@ -17,6 +17,11 @@ Thư mục này chứa các migration scripts cho database Supabase.
 - `008_create_products_storage.sql`: Hướng dẫn tạo storage bucket và policies cho products
 - `009_setup_products_rls.sql`: Thiết lập Row Level Security policies cho categories và products
 
+### Sprint 3
+- `010_create_try_on_results_table.sql`: Tạo bảng try_on_results để cache kết quả thử đồ ảo (AI generated)
+- `011_create_tryon_storage.sql`: Hướng dẫn tạo storage bucket cho ảnh kết quả thử đồ
+
+
 ## Cách chạy migrations
 
 ### Trên Supabase Dashboard
@@ -40,6 +45,17 @@ Thư mục này chứa các migration scripts cho database Supabase.
 2. Chạy `007_create_products_table.sql` để tạo bảng products
 3. Tạo storage bucket theo hướng dẫn trong `008_create_products_storage.sql`
 4. Chạy `009_setup_products_rls.sql` để thiết lập RLS policies (lưu ý: với JWT tự quản lý, RLS sẽ không hoạt động trực tiếp, cần kiểm tra role ở Backend)
+
+#### Sprint 3
+1. Chạy `010_create_try_on_results_table.sql` để tạo bảng cache kết quả thử đồ
+2. Tạo storage bucket `tryon-results` theo hướng dẫn trong `011_create_tryon_storage.sql`:
+   - Vào Supabase Dashboard > Storage > Create new bucket
+   - Name: `tryon-results`
+   - Public bucket: **Yes** (để frontend đọc được ảnh)
+   - File size limit: 10MB
+   - Allowed MIME types: image/jpeg, image/jpg, image/png, image/webp
+3. Thêm `GEMINI_API_KEY` vào file `.env` (lấy từ https://aistudio.google.com/app/apikey)
+
 
 ## Utility Scripts
 
