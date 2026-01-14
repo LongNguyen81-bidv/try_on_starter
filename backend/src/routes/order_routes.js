@@ -1,5 +1,6 @@
 import { Router } from 'express';
-import { verifyToken, verifyAdmin } from '../middleware/auth_middleware.js';
+import { authenticateToken } from '../middleware/auth_middleware.js';
+import { verifyAdmin } from '../middleware/admin_middleware.js';
 import {
     createOrder,
     getMyOrders,
@@ -17,22 +18,23 @@ const router = Router();
 
 // ===== User Routes (Protected) =====
 // POST /api/orders - Checkout/Create order
-router.post('/', verifyToken, createOrder);
+router.post('/', authenticateToken, createOrder);
 
 // GET /api/orders - Get my orders
-router.get('/', verifyToken, getMyOrders);
+router.get('/', authenticateToken, getMyOrders);
 
 // GET /api/orders/:orderId - Get order detail
-router.get('/:orderId', verifyToken, getOrder);
+router.get('/:orderId', authenticateToken, getOrder);
 
 // ===== Admin Routes =====
 // GET /api/admin/orders - Get all orders
-router.get('/admin/list', verifyToken, verifyAdmin, getAdminOrders);
+router.get('/admin/list', verifyAdmin, getAdminOrders);
 
 // GET /api/admin/orders/stats - Get order statistics
-router.get('/admin/stats', verifyToken, verifyAdmin, getStats);
+router.get('/admin/stats', verifyAdmin, getStats);
 
 // PUT /api/admin/orders/:orderId - Update order status
-router.put('/admin/:orderId', verifyToken, verifyAdmin, updateOrderStatus);
+router.put('/admin/:orderId', verifyAdmin, updateOrderStatus);
 
 export default router;
+

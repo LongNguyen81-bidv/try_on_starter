@@ -1,4 +1,4 @@
-import { getToken } from './auth_service.js';
+import { getToken } from '../utils/token.js';
 
 const API_URL = 'http://localhost:3000/api/v1';
 

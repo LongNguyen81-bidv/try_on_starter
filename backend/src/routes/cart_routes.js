@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { verifyToken } from '../middleware/auth_middleware.js';
+import { authenticateToken } from '../middleware/auth_middleware.js';
 import {
     getUserCart,
     addToCart,
@@ -18,7 +18,7 @@ const router = Router();
 // ============================================
 
 // Apply auth middleware to all routes
-router.use(verifyToken);
+router.use(authenticateToken);
 
 // GET /api/cart - Get user's cart
 router.get('/', getUserCart);
